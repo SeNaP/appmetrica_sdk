@@ -22,11 +22,13 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String? _libraryVersion = 'Unknown';
+  String? _appMetricaDeviceID = 'Unknown';
 
   @override
   void initState() {
     super.initState();
     initLibrarayVersionState();
+    initAppMetricaDeviceIDState();
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
@@ -51,6 +53,22 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  Future<void> initAppMetricaDeviceIDState() async {
+    String? appMetricaDeviceID;
+    try {
+      appMetricaDeviceID = await AppmetricaSdk().requestAppMetricaDeviceID();
+    } on PlatformException {
+      appMetricaDeviceID = 'Failed to get library version.';
+    }
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _appMetricaDeviceID = appMetricaDeviceID;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -66,6 +84,9 @@ class _MyAppState extends State<MyApp> {
                     Container(
                       child: Text(
                           'AppMetrica SDK Library version: $_libraryVersion\n'),
+                    ),
+                    Container(
+                      child: Text('AppMetricaDeviceID: $_appMetricaDeviceID'),
                     ),
                     RaisedButton(
                       child: const Text('Send a custom event'),

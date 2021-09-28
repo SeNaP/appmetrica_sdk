@@ -5,7 +5,10 @@
 package com.emallstudio.appmetrica_sdk;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.app.Activity;
 import android.app.Application;
@@ -13,6 +16,7 @@ import android.content.Context;
 import android.content.Intent;
 
 import android.util.SparseArray;
+
 import java.util.Map;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -24,6 +28,7 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 import io.flutter.view.FlutterView;
 
+import com.yandex.metrica.AppMetricaDeviceIDListener;
 import com.yandex.metrica.YandexMetrica;
 import com.yandex.metrica.YandexMetricaConfig;
 import com.yandex.metrica.profile.Attribute;
@@ -31,14 +36,18 @@ import com.yandex.metrica.profile.StringAttribute;
 import com.yandex.metrica.profile.UserProfile;
 import com.yandex.metrica.profile.UserProfileUpdate;
 
-/** AppmetricaSdkPlugin */
+/**
+ * AppmetricaSdkPlugin
+ */
 public class AppmetricaSdkPlugin implements MethodCallHandler, FlutterPlugin {
     private static final String TAG = "AppmetricaSdkPlugin";
     private MethodChannel methodChannel;
     private Context context;
     private Application application;
 
-    /** Plugin registration for v1 embedder. */
+    /**
+     * Plugin registration for v1 embedder.
+     */
     public static void registerWith(Registrar registrar) {
         final AppmetricaSdkPlugin instance = new AppmetricaSdkPlugin();
         instance.onAttachedToEngine(registrar.context(), registrar.messenger());
@@ -46,14 +55,14 @@ public class AppmetricaSdkPlugin implements MethodCallHandler, FlutterPlugin {
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
-      onAttachedToEngine(flutterPluginBinding.getApplicationContext(), flutterPluginBinding.getBinaryMessenger());
+        onAttachedToEngine(flutterPluginBinding.getApplicationContext(), flutterPluginBinding.getBinaryMessenger());
     }
 
     private void onAttachedToEngine(Context applicationContext, BinaryMessenger binaryMessenger) {
-      application = (Application) applicationContext;
-      context = applicationContext;
-      methodChannel = new MethodChannel(binaryMessenger, "emallstudio.com/appmetrica_sdk");
-      methodChannel.setMethodCallHandler(this);
+        application = (Application) applicationContext;
+        context = applicationContext;
+        methodChannel = new MethodChannel(binaryMessenger, "emallstudio.com/appmetrica_sdk");
+        methodChannel.setMethodCallHandler(this);
     }
 
     @Override
@@ -106,10 +115,13 @@ public class AppmetricaSdkPlugin implements MethodCallHandler, FlutterPlugin {
             case "reportReferralUrl":
                 handleReportReferralUrl(call, result);
                 break;
+            case "requestAppMetricaDeviceID":
+                handleRequestAppMetricaDeviceID(call, result);
+                break;
             default:
-              result.notImplemented();
-              break;
-          }
+                result.notImplemented();
+                break;
+        }
     }
 
     private void handleActivate(MethodCall call, Result result) {
@@ -345,5 +357,34 @@ public class AppmetricaSdkPlugin implements MethodCallHandler, FlutterPlugin {
         }
 
         result.success(null);
+    }
+
+    private void handleRequestAppMetricaDeviceID(MethodCall call, final Result result) {
+        try {
+            YandexMetrica.requestAppMetricaDeviceID(new AppMetricaDeviceIDListener() {
+                @Override
+                public void onLoaded(@Nullable final String s) {
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            result.success(s);
+                        }
+                    });
+                }
+
+                @Override
+                public void onError(@NonNull final Reason reason) {
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            result.error("onError when AppMetricaDeviceIdListener", reason.toString(), null);
+                        }
+                    });
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+            result.error("Error get AppMetricaDeviceID", e.getMessage(), null);
+        }
     }
 }

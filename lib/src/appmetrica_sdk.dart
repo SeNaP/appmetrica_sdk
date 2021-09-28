@@ -191,4 +191,8 @@ class AppmetricaSdk {
     });
     return;
   }
+
+  Future<String?> requestAppMetricaDeviceID() async {
+    return await _channel.invokeMethod<String>('requestAppMetricaDeviceID');
+  }
 }
